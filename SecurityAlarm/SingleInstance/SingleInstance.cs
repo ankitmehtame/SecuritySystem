@@ -4,6 +4,8 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Collections.Generic;
 
+// Credit for this code goes to Flawless Code (found from StackOverflow http://stackoverflow.com/questions/917883/c-sharp-how-to-single-instance-application-that-accepts-new-parameters)
+// Archive found at http://web.archive.org/web/20080506103924/http://www.flawlesscode.com/post/2008/02/Enforcing-single-instance-with-argument-passing.aspx
 namespace FlawlessCode
 {
     /// <summary>
