@@ -13,6 +13,7 @@ metadata
   definition (name: "Ankit REST Siren", author: "Ankit Mehta")
   {
     capability "Alarm"
+    capability "Refresh"
     command "activatenotifystate"
     command "activatewarnstate"
     command "activatealarmstate"
@@ -55,6 +56,26 @@ metadata
   }
 }
 
+def strobe()
+{
+}
+
+def siren()
+{
+  activatewarnstate()
+}
+
+def both()
+{
+  strobe()
+  siren()
+}
+
+def off()
+{
+  activateoffstate()
+}
+
 def activatenotifystate()
 {
   callRestApi("notify")
@@ -77,27 +98,29 @@ def activateoffstate()
 
 def parse(String description)
 {
-    // log.debug "parse called with ${description}"
+    log.debug "parse called with ${description}"
     def msg = parseLanMessage(description)
 
     def status = msg.status          // => http status code of the response
     // log.debug("status ${status}")
-    //def json = msg.json              // => any JSON included in response body, as a data structure of lists and maps
+    def json = msg.json              // => any JSON included in response body, as a data structure of lists and maps
     // log.debug("json ${json}")
-    def data = msg.data
+    //def data = msg.data
     
-    if(status >= 300 || status < 200)
+    if(status >= 300 || status < 200 || json.isSuccessful == null)
     {
         log.debug("status is not in 200s")
         updateStatus("offline")
         refreshComplete()
         return
     }
-    if(state.nextStateOnSuccessfulCall != null)
+    def nextState = json.alarmState
+    if(nextState == null)
     {
-        log.debug("setting state to " + state.nextStateOnSuccessfulCall)
-        updateStatus(state.nextStateOnSuccessfulCall)
+        nextState = "offline"
     }
+    log.debug("setting state to " + nextState)
+    updateStatus(nextState)
     refreshComplete()
 }
 
@@ -120,8 +143,7 @@ def callRestApi(status)
   {
       log.debug "Calling ${hostaddress}"
       updateStatusBeforeRefresh()
-      def cmd = commandToCall
-      sendHubCommand(cmd)
+      sendHubCommand(commandToCall)
   }
   catch(all)
   {
@@ -158,8 +180,16 @@ def refresh()
 def refreshComplete()
 {
   state.isrefreshing = false
+  if(state.nextStateOnSuccessfulCall == null)
+  {
+      log.debug("refresh complete")
+  }
+  else
+  {
+      log.debug("call complete for " + state.nextStateOnSuccessfulCall)
+  }
   state.nextStateOnSuccessfulCall = null
-  log.debug("refresh complete")
+  
   if(state.ispolling)
   {
     runIn(60 * 10, refresh)
@@ -178,6 +208,7 @@ def getStateCommand() {
 }
 
 def getOffCommand() {
+    log.debug("${hostaddress}${offpath}")
     def result = new physicalgraph.device.HubAction(
         method: "GET",
         path: "${offpath}",
@@ -189,6 +220,7 @@ def getOffCommand() {
 }
 
 def getNotifyCommand() {
+    log.debug("${hostaddress}${notifypath}")
     def result = new physicalgraph.device.HubAction(
         method: "GET",
         path: "${notifypath}",
@@ -200,6 +232,7 @@ def getNotifyCommand() {
 }
 
 def getWarnCommand() {
+    log.debug("${hostaddress}${warnpath}")
     def result = new physicalgraph.device.HubAction(
         method: "GET",
         path: "${warnpath}",
@@ -211,6 +244,7 @@ def getWarnCommand() {
 }
 
 def getAlarmCommand() {
+    log.debug("${hostaddress}${alarmpath}")
     def result = new physicalgraph.device.HubAction(
         method: "GET",
         path: "${alarmpath}",
