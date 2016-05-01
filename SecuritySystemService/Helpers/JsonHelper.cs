@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using System.IO;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ namespace SecuritySystemService.Helpers
             {
                 var settings = new JsonSerializerSettings();
                 settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                settings.Converters.Add(new StringEnumConverter(true));
                 return settings;
             }
         }

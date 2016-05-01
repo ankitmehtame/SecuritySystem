@@ -1,9 +1,10 @@
 ﻿using log4net;
 using SecuritySystemService.Helpers;
+using SecuritySystemService.Models;
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
-using System.Net;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -13,15 +14,40 @@ namespace SecuritySystemService.Controllers
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(SecurityController));
 
+        private static SecurityAlarmState CurrentState = SecurityAlarmState.Off;
+        private static readonly List<Process> ProcessesStarted = new List<Process>();
+        private static readonly object SyncLock = new object();
+
+        [HttpGet]
+        [ActionName("state")]
+        public async Task<SecurityCallStateResult> GetState()
+        {
+            try
+            {
+                await Task.Yield();
+                return SecurityCallResultHelper.FromSuccessful(CurrentState);
+            }
+            catch (AggregateException ex)
+            {
+                Log.Debug($"Aggregate Error in Notify. Error: {ex}");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"Error in Notify. Error: {ex}");
+            }
+            return SecurityCallResultHelper.FromUnsuccessful(CurrentState);
+        }
+
         [HttpGet]
         [ActionName("notify")]
-        public async Task<HttpStatusCode> Notify(int seconds)
+        public async Task<SecurityCallStateResult> Notify(int seconds)
         {
             try
             {
                 await Task.Yield();
                 StartProcess("NotifyCommand", "NotifyCommandArgs", new { DurationInSeconds = seconds });
-                return HttpStatusCode.Accepted;
+                CurrentState = SecurityAlarmState.Notify;
+                return SecurityCallResultHelper.FromSuccessful(CurrentState);
             }
             catch (AggregateException ex)
             {
@@ -31,18 +57,18 @@ namespace SecuritySystemService.Controllers
             {
                 Log.Debug($"Error in Notify. Error: {ex}");
             }
-            return HttpStatusCode.InternalServerError;
+            return SecurityCallResultHelper.FromUnsuccessful(CurrentState);
         }
 
         [HttpGet]
         [ActionName("warn")]
-        public async Task<HttpStatusCode> Warn(int seconds)
+        public async Task<SecurityCallStateResult> Warn(int seconds)
         {
             try
             {
                 await Task.Yield();
                 StartProcess("WarnCommand", "WarnCommandArgs", new { DurationInSeconds = seconds });
-                return HttpStatusCode.Accepted;
+                return SecurityCallResultHelper.FromSuccessful(CurrentState);
             }
             catch (AggregateException ex)
             {
@@ -52,18 +78,18 @@ namespace SecuritySystemService.Controllers
             {
                 Log.Debug($"Error in Notify. Error: {ex}");
             }
-            return HttpStatusCode.InternalServerError;
+            return SecurityCallResultHelper.FromUnsuccessful(CurrentState);
         }
 
         [HttpGet]
         [ActionName("alarm")]
-        public async Task<HttpStatusCode> Alarm(int seconds)
+        public async Task<SecurityCallStateResult> Alarm(int seconds)
         {
             try
             {
                 await Task.Yield();
                 StartProcess("AlarmCommand", "AlarmCommandArgs", new { DurationInSeconds = seconds });
-                return HttpStatusCode.Accepted;
+                return SecurityCallResultHelper.FromSuccessful(CurrentState);
             }
             catch (AggregateException ex)
             {
@@ -73,18 +99,18 @@ namespace SecuritySystemService.Controllers
             {
                 Log.Debug($"Error in Notify. Error: {ex}");
             }
-            return HttpStatusCode.InternalServerError;
+            return SecurityCallResultHelper.FromUnsuccessful(CurrentState);
         }
 
         [HttpGet]
         [ActionName("stop")]
-        public async Task<HttpStatusCode> Stop()
+        public async Task<SecurityCallStateResult> Stop()
         {
             try
             {
                 await Task.Yield();
                 StartProcess("StopCommand", "StopCommandArgs");
-                return HttpStatusCode.Accepted;
+                return SecurityCallResultHelper.FromSuccessful(CurrentState);
             }
             catch (AggregateException ex)
             {
@@ -94,10 +120,10 @@ namespace SecuritySystemService.Controllers
             {
                 Log.Debug($"Error in Notify. Error: {ex}");
             }
-            return HttpStatusCode.InternalServerError;
+            return SecurityCallResultHelper.FromUnsuccessful(CurrentState);
         }
 
-        private void StartProcess(string commandKey, string commandArgsKey, object parameters = null)
+        private async Task StartProcess(string commandKey, string commandArgsKey, object parameters = null)
         {
             var command = ConfigurationManager.AppSettings[commandKey];
             var arguments = ConfigurationManager.AppSettings[commandArgsKey];
@@ -121,10 +147,20 @@ namespace SecuritySystemService.Controllers
                 UseShellExecute = false,
                 Verb = "runas",
             };
-            //s.UserName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-            //s.Password = 
-            Process.Start(s);
-            //ProcessAsUser.Launch(@"C:\Windows\System32\notepad.exe");
+            var p = Process.Start(s);
+            lock (SyncLock)
+            {
+                ProcessesStarted.Add(p);
+            }
+            await p.WaitForExitAsync();
+            lock (SyncLock)
+            {
+                ProcessesStarted.Remove(p);
+                if(ProcessesStarted.Count == 0)
+                {
+                    CurrentState = SecurityAlarmState.Off;
+                }
+            }
         }
     }
 }

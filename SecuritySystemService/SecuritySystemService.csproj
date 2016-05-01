@@ -90,7 +90,11 @@
     <Compile Include="Controllers\SecurityController.cs" />
     <Compile Include="Helpers\DynamicHelper.cs" />
     <Compile Include="Helpers\JsonHelper.cs" />
-    <Compile Include="Helpers\ProcessHelper.cs" />
+    <Compile Include="Helpers\ProcessExtensions.cs" />
+    <Compile Include="Helpers\SecurityCallResultHelper.cs" />
+    <Compile Include="Models\SecurityCallResult.cs" />
+    <Compile Include="Models\SecurityAlarmState.cs" />
+    <Compile Include="Models\SecurityCallStateResult.cs" />
     <Compile Include="SecuritySystemService.cs">
       <SubType>Component</SubType>
     </Compile>
