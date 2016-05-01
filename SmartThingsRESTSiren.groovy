@@ -52,7 +52,7 @@ metadata
       state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
     }
     main("state")
-    details(["state", "refresh"])
+    details(["state", "refresh", "offAction", "notifyAction", "warnAction", "alarmAction"])
   }
 }
 
@@ -96,9 +96,9 @@ def activateoffstate()
   callRestApi("off")
 }
 
-def parse(String description)
+def parse(description)
 {
-    log.debug "parse called with ${description}"
+    // log.debug("parse called with ${description}")
     def msg = parseLanMessage(description)
 
     def status = msg.status          // => http status code of the response
@@ -166,7 +166,7 @@ def refresh()
   {
       log.debug "Calling ${hostaddress}"
       updateStatusBeforeRefresh()
-      def cmd = myCommand()
+      def cmd = getStateCommand()
       sendHubCommand(cmd)
   }
   catch(all)
@@ -197,6 +197,7 @@ def refreshComplete()
 }
 
 def getStateCommand() {
+    log.debug("${hostaddress}${statepath}")
     def result = new physicalgraph.device.HubAction(
         method: "GET",
         path: "${statepath}",
