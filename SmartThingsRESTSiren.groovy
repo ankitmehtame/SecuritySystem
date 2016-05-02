@@ -1,11 +1,11 @@
 preferences
 {
   input("hostaddress", "text", title: "REST Host <IP:Port>")
-  input("statepath", "text", title: "Get State REST Path e.g. /api/security/state")
-  input("offpath", "text", title: "Off Action REST Path e.g. /api/security/off")
-  input("notifypath", "text", title: "Notify Action REST Path e.g. /api/security/notify")
-  input("warnpath", "text", title: "Warn Action REST Path e.g. /api/security/warn")
-  input("alarmpath", "text", title: "Alarm Action REST Path e.g. /api/security/alarm")
+  input("statepath", "text", title: "Get State REST Path after host including slash")
+  input("offpath", "text", title: "Off Action REST Path  after host including slash")
+  input("notifypath", "text", title: "Notify Action REST Path after host including slash")
+  input("warnpath", "text", title: "Warn Action REST Path after host including slash")
+  input("alarmpath", "text", title: "Alarm Action REST Path after host including slash")
 }
 
 metadata
@@ -62,7 +62,7 @@ def strobe()
 
 def siren()
 {
-  activatewarnstate()
+  activatealarmstate()
 }
 
 def both()
